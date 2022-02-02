@@ -1,0 +1,34 @@
+package com.mqtt.rabbitmq;
+
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.DeliverCallback;
+
+public class RabbitMQReceiveTopic {
+
+	private static final String EXCHANGE_NAME = "topic_logs";
+	private static String topic = "*.green.*"; //or #.green.#
+
+    public static void main(String[] argv) throws Exception {
+    	
+        ConnectionFactory factory = new ConnectionFactory();
+        factory.setHost("localhost");
+        factory.setPort(5672);//automatically takes it
+        
+        Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();        
+        
+        channel.exchangeDeclare(EXCHANGE_NAME, "topic");
+        String queueName = channel.queueDeclare().getQueue();
+        channel.queueBind(queueName, EXCHANGE_NAME, topic);
+
+       System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
+
+        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+            String message = new String(delivery.getBody(), "UTF-8");
+            System.out.println(" [x] Received '" + delivery.getEnvelope().getRoutingKey() + "':'" + message + "'");
+        };
+        channel.basicConsume(queueName, true, deliverCallback, consumerTag -> { });
+    }
+}
